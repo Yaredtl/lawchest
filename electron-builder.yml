@@ -1,0 +1,32 @@
+appId: com.lawchest.app
+productName: LawChest
+copyright: LawChest
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+extraResources:
+  - from: resources/fonts
+    to: fonts
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  executableName: LawChest
+  artifactName: LawChest-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: LawChest
+  uninstallDisplayName: LawChest
+  installerLanguages: [es_ES]
+  language: '3082'
+  deleteAppDataOnUninstall: false
+npmRebuild: false
