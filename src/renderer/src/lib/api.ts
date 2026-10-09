@@ -8,7 +8,11 @@ import type {
   Movement,
   MovementInput,
   Result,
-  TrashItem
+  SettingsInfo,
+  FolderInfo,
+  SyncStatus,
+  TrashItem,
+  UpdateState
 } from '@shared/types'
 
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
@@ -18,6 +22,24 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 export const api = {
+  settings: {
+    get: () => invoke<SettingsInfo>('settings:get'),
+    pickFolder: () => invoke<FolderInfo | null>('settings:pickFolder'),
+    inspect: (path: string) => invoke<FolderInfo>('settings:inspect', path),
+    switchTo: (target: string, mode: 'use' | 'move') =>
+      invoke<{ previous: string; removedPrevious: boolean }>('settings:switch', target, mode),
+    setupDone: () => invoke<void>('settings:setupDone')
+  },
+  sync: {
+    status: () => invoke<SyncStatus>('sync:status'),
+    now: () => invoke<SyncStatus>('sync:now')
+  },
+  updates: {
+    state: () => invoke<UpdateState>('update:state'),
+    check: () => invoke<UpdateState>('update:check'),
+    download: () => invoke<void>('update:download'),
+    install: () => invoke<void>('update:install')
+  },
   app: {
     info: () => invoke<AppInfo>('app:info'),
     openDataDir: () => invoke<void>('app:openDataDir')

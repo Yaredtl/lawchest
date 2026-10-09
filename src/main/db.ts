@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
-import { dbPath } from './paths'
+import { join } from 'path'
+import { localDir } from './config'
 
 let db: DatabaseSync | null = null
 
@@ -33,18 +34,34 @@ CREATE TABLE IF NOT EXISTS trash (
   size INTEGER NOT NULL DEFAULT 0,
   deleted_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS sync_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `
+
+/** Copia de trabajo local de la base de datos (nunca dentro de la carpeta sincronizada) */
+export const workingDbPath = (): string => join(localDir(), 'trabajo.db')
+
+export function applySchema(d: DatabaseSync): void {
+  d.exec('PRAGMA foreign_keys = ON;')
+  d.exec(SCHEMA)
+}
 
 export function openDb(): DatabaseSync {
   if (db) return db
-  db = new DatabaseSync(dbPath())
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;')
-  db.exec(SCHEMA)
+  db = new DatabaseSync(workingDbPath())
+  db.exec('PRAGMA journal_mode = WAL;')
+  applySchema(db)
   return db
 }
 
 export function getDb(): DatabaseSync {
   return db ?? openDb()
+}
+
+export function isDbOpen(): boolean {
+  return db !== null
 }
 
 export function closeDb(): void {

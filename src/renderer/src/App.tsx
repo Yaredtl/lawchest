@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Archive, CalendarRange, FolderOpen, Menu as MenuIcon, Plus, Trash2, Users, X } from 'lucide-react'
+import { Archive, CalendarRange, Cloud, FolderOpen, HardDrive, Loader2, Menu as MenuIcon, Plus, Settings, Sparkles, Trash2, Users, X } from 'lucide-react'
+import type { SettingsInfo } from '@shared/types'
 import { Logo } from './components/Logo'
 import { PopupMenu, type MenuItem } from './components/Menu'
 import { IconButton } from './components/ui'
@@ -8,6 +9,10 @@ import ClientPage from './pages/ClientPage'
 import TrashPage from './pages/TrashPage'
 import MonthlyPage from './pages/MonthlyPage'
 import BackupPage from './pages/BackupPage'
+import SettingsPage from './pages/SettingsPage'
+import { UpdateNotice, useUpdateState } from './components/UpdateNotice'
+import { Welcome } from './components/Welcome'
+import { useToast } from './components/feedback'
 import { api } from './lib/api'
 
 export type Route =
@@ -16,6 +21,7 @@ export type Route =
   | { page: 'monthly' }
   | { page: 'trash' }
   | { page: 'backup' }
+  | { page: 'settings' }
 
 interface Nav {
   route: Route
@@ -39,7 +45,8 @@ const NAV_ITEMS: { page: Route['page']; label: string; icon: ReactNode }[] = [
   { page: 'clients', label: 'Clientes', icon: <Users className="size-5" /> },
   { page: 'monthly', label: 'Resumen mensual', icon: <CalendarRange className="size-5" /> },
   { page: 'trash', label: 'Papelera', icon: <Trash2 className="size-5" /> },
-  { page: 'backup', label: 'Copias de seguridad', icon: <Archive className="size-5" /> }
+  { page: 'backup', label: 'Copias de seguridad', icon: <Archive className="size-5" /> },
+  { page: 'settings', label: 'Ajustes', icon: <Settings className="size-5" /> }
 ]
 
 export default function App() {
@@ -48,10 +55,42 @@ export default function App() {
   const [newMenu, setNewMenu] = useState<{ x: number; y: number } | null>(null)
   const [drawer, setDrawer] = useState(false)
   const [version, setVersion] = useState('')
+  const [settings, setSettings] = useState<SettingsInfo | null>(null)
+  const [saving, setSaving] = useState(false)
+  // Al llegar cambios del otro ordenador se vuelve a cargar la pantalla actual
+  const [dataVersion, setDataVersion] = useState(0)
+  const update = useUpdateState()
+  const toast = useToast()
+
+  const loadSettings = useCallback(() => {
+    api.settings
+      .get()
+      .then((s) => {
+        setSettings(s)
+        setVersion(s.version)
+        setSaving(s.sync.dirty)
+      })
+      .catch(() => undefined)
+  }, [])
 
   useEffect(() => {
-    api.app.info().then((i) => setVersion(i.version)).catch(() => undefined)
-  }, [])
+    loadSettings()
+    const offs = [
+      window.lawchest.on('sync:reloaded', () => {
+        setDataVersion((v) => v + 1)
+        toast.info('Datos actualizados con los cambios de tu otro ordenador.')
+        loadSettings()
+      }),
+      window.lawchest.on('sync:conflict', () => {
+        toast.error(
+          'Se hicieron cambios a la vez en otro ordenador. Se ha cargado la versión más reciente; la otra se ha guardado en «Conflictos de sincronización».'
+        )
+      }),
+      window.lawchest.on('sync:error', (msg) => toast.error(`No se pudieron guardar los datos en la carpeta compartida: ${String(msg)}`)),
+      window.lawchest.on('sync:saved', () => setSaving(false))
+    ]
+    return () => offs.forEach((off) => off())
+  }, [loadSettings, toast])
 
   const go = useCallback((r: Route): void => {
     setRoute(r)
@@ -99,7 +138,27 @@ export default function App() {
         <button className="flex items-center gap-2 hover:text-brand-700" onClick={() => api.app.openDataDir()}>
           <FolderOpen className="size-4" /> Abrir carpeta de datos
         </button>
-        <p className="mt-2">LawChest {version && `v${version}`} · Todo se guarda en este ordenador</p>
+        {settings && (
+          <button onClick={() => go({ page: 'settings' })} className="mt-2 flex items-center gap-2 text-left hover:text-brand-700" title={settings.dataDir}>
+            {saving ? (
+              <Loader2 className="size-4 shrink-0 animate-spin" />
+            ) : settings.provider ? (
+              <Cloud className="size-4 shrink-0 text-sky-600" />
+            ) : (
+              <HardDrive className="size-4 shrink-0" />
+            )}
+            {saving ? 'Guardando…' : settings.provider ? `Sincronizado con ${settings.provider}` : 'Guardado en este ordenador'}
+          </button>
+        )}
+        {(update.status === 'available' || update.status === 'ready') && (
+          <button
+            onClick={() => go({ page: 'settings' })}
+            className="mt-3 flex items-center gap-2 rounded-full bg-accent-100 px-3 py-1.5 text-xs font-semibold text-brand-800 hover:bg-accent-200"
+          >
+            <Sparkles className="size-3.5" /> Nueva versión {update.version}
+          </button>
+        )}
+        <p className="mt-2">LawChest {version && `v${version}`}</p>
       </div>
     </div>
   )
@@ -141,16 +200,21 @@ export default function App() {
           </div>
           <div className="min-h-0 flex-1 p-2 sm:p-3 lg:pl-0">
             <div className="flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-200/60">
-              {route.page === 'clients' && <ClientsPage />}
-              {route.page === 'client' && <ClientPage key={route.id} id={route.id} initialTab={route.tab} />}
-              {route.page === 'monthly' && <MonthlyPage />}
-              {route.page === 'trash' && <TrashPage />}
-              {route.page === 'backup' && <BackupPage />}
+              <div key={dataVersion} className="flex min-h-0 flex-1 flex-col">
+                {route.page === 'clients' && <ClientsPage />}
+                {route.page === 'client' && <ClientPage key={route.id} id={route.id} initialTab={route.tab} />}
+                {route.page === 'monthly' && <MonthlyPage />}
+                {route.page === 'trash' && <TrashPage />}
+                {route.page === 'backup' && <BackupPage />}
+                {route.page === 'settings' && <SettingsPage />}
+              </div>
             </div>
           </div>
         </main>
       </div>
       {newMenu && <PopupMenu x={newMenu.x} y={newMenu.y} items={newItems} onClose={() => setNewMenu(null)} />}
+      {settings?.firstRun && <Welcome info={settings} onDone={loadSettings} />}
+      <UpdateNotice />
     </NavContext.Provider>
   )
 }

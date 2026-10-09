@@ -1,10 +1,12 @@
 import { createWriteStream, promises as fs, existsSync } from 'fs'
 import { join } from 'path'
+import { tmpdir } from 'os'
 import archiver from 'archiver'
 import extract from 'extract-zip'
 import { app } from 'electron'
-import { closeDb, getDb, openDb } from './db'
-import { clientsDir, dbPath, ensureDataDirs, getDataDir, trashDir } from './paths'
+import { getDb } from './db'
+import { flush, importDatabase } from './store'
+import { clientsDir, ensureDataDirs, getDataDir, trashDir } from './paths'
 import { UserError } from './fsutil'
 
 export function backupFileName(): string {
@@ -15,7 +17,7 @@ export function backupFileName(): string {
 
 /** Crea un .zip con la base de datos, las carpetas de clientes y la papelera */
 export async function createBackup(target: string): Promise<void> {
-  const tmpDb = join(getDataDir(), `.copia-${Date.now()}.db`)
+  const tmpDb = join(tmpdir(), `lawchest-copia-${Date.now()}.db`)
   // Copia consistente de la base de datos aunque esté en uso
   getDb().prepare('VACUUM INTO ?').run(tmpDb)
   try {
@@ -45,7 +47,7 @@ export async function createBackup(target: string): Promise<void> {
 
 /**
  * Restaura una copia. Antes guarda los datos actuales en
- * Documentos\LawChest\Antes de restaurar\<fecha> por seguridad.
+ * <carpeta de datos>\Antes de restaurar\<fecha> por seguridad.
  */
 export async function restoreBackup(source: string): Promise<string> {
   const dataDir = getDataDir()
@@ -56,25 +58,22 @@ export async function restoreBackup(source: string): Promise<string> {
     if (!existsSync(join(staging, 'lawchest.db')) || !existsSync(join(staging, 'lawchest-copia.json'))) {
       throw new UserError('Este archivo no es una copia de seguridad de LawChest.')
     }
+    await flush()
     const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
     const previous = join(dataDir, 'Antes de restaurar', stamp)
     await fs.mkdir(previous, { recursive: true })
-
-    closeDb()
+    getDb().prepare('VACUUM INTO ?').run(join(previous, 'lawchest.db'))
     for (const name of ['Clientes', 'Papelera']) {
       if (existsSync(join(dataDir, name))) await fs.rename(join(dataDir, name), join(previous, name))
     }
-    for (const name of ['lawchest.db', 'lawchest.db-wal', 'lawchest.db-shm']) {
-      if (existsSync(join(dataDir, name))) await fs.rename(join(dataDir, name), join(previous, name))
-    }
-    await fs.rename(join(staging, 'lawchest.db'), dbPath())
     for (const name of ['Clientes', 'Papelera']) {
       if (existsSync(join(staging, name))) await fs.rename(join(staging, name), join(dataDir, name))
     }
+    ensureDataDirs()
+    await importDatabase(join(staging, 'lawchest.db'))
     return previous
   } finally {
     await fs.rm(staging, { recursive: true, force: true }).catch(() => undefined)
     ensureDataDirs()
-    openDb()
   }
 }
