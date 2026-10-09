@@ -82,3 +82,44 @@ export interface Result<T = void> {
   error?: string
   canceled?: boolean
 }
+
+export type CloudProvider = 'OneDrive' | 'Google Drive' | 'Dropbox' | 'iCloud'
+
+export interface FolderInfo {
+  target: string
+  hasData: boolean
+  provider: CloudProvider | null
+  isCurrent: boolean
+}
+
+export interface CloudSuggestion extends FolderInfo {
+  name: CloudProvider
+}
+
+export interface SyncStatus {
+  dirty: boolean
+  rev: number
+  savedAt: string | null
+  savedBy: string | null
+  thisMachine: string
+  lastError: string | null
+}
+
+export interface SettingsInfo {
+  dataDir: string
+  provider: CloudProvider | null
+  firstRun: boolean
+  suggestions: CloudSuggestion[]
+  sync: SyncStatus
+  version: string
+  updatesSupported: boolean
+}
+
+export type UpdateState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'none'; checkedAt: string }
+  | { status: 'available'; version: string; notes: string; date: string | null }
+  | { status: 'downloading'; version: string; percent: number }
+  | { status: 'ready'; version: string }
+  | { status: 'error'; message: string }

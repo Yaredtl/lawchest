@@ -1,7 +1,7 @@
 {
   "name": "lawchest",
   "productName": "LawChest",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "LawChest - Gestor de clientes, archivos y cuentas para despachos de abogados",
   "author": "LawChest",
   "license": "UNLICENSED",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "archiver": "^7.0.1",
+    "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "extract-zip": "^2.0.1",
     "pdfmake": "^0.2.23"

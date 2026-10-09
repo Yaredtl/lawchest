@@ -30,3 +30,8 @@ nsis:
   language: '3082'
   deleteAppDataOnUninstall: false
 npmRebuild: false
+publish:
+  - provider: github
+    owner: Yaredtl
+    repo: lawchest
+    releaseType: release

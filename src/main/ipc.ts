@@ -5,8 +5,12 @@ import * as files from './files'
 import * as trash from './trash'
 import * as exporter from './exporter'
 import * as backup from './backup'
+import * as datadir from './datadir'
+import * as updater from './updater'
+import { checkDirty, flush, poll, storeStatus, syncEvents } from './store'
 import { UserError } from './fsutil'
 import { getDataDir } from './paths'
+import { configExists, readConfig } from './config'
 
 function errorMessage(e: unknown): string {
   if (e instanceof UserError) return e.message
@@ -27,6 +31,13 @@ function handle<A extends unknown[], T>(channel: string, fn: (...args: A) => T |
       return { ok: true, data: await fn(...(args as A)) }
     } catch (e) {
       return { ok: false, error: errorMessage(e) }
+    } finally {
+      // Si la operación cambió la base de datos, se guarda en la carpeta de datos (sincronizada)
+      try {
+        checkDirty()
+      } catch {
+        /* base de datos cerrándose */
+      }
     }
   })
 }
@@ -58,7 +69,57 @@ const remember = (p: string): string => {
   return p
 }
 
+function broadcast(channel: string, payload?: unknown): void {
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload)
+}
+
 export function registerIpc(): void {
+  syncEvents.on('reloaded', () => broadcast('sync:reloaded'))
+  syncEvents.on('conflict', (info) => broadcast('sync:conflict', info))
+  syncEvents.on('error', (msg) => broadcast('sync:error', msg))
+  syncEvents.on('saved', () => broadcast('sync:saved'))
+
+  /* Carpeta de datos y sincronización entre ordenadores */
+  handle('settings:get', () => {
+    const dataDir = getDataDir()
+    return {
+      dataDir,
+      provider: datadir.detectProvider(dataDir),
+      firstRun: !readConfig().setupDone,
+      suggestions: datadir.cloudSuggestions(),
+      sync: storeStatus(),
+      version: app.getVersion(),
+      updatesSupported: updater.updatesSupported(),
+      configExists: configExists()
+    }
+  })
+  handle('settings:pickFolder', async () => {
+    const w = win()
+    const opts: Electron.OpenDialogOptions = {
+      title: 'Elige dónde guardar los datos de LawChest',
+      buttonLabel: 'Elegir esta carpeta',
+      properties: ['openDirectory', 'createDirectory']
+    }
+    const res = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts)
+    if (res.canceled || !res.filePaths[0]) return null
+    return datadir.inspectFolder(res.filePaths[0])
+  })
+  handle('settings:inspect', (p: string) => datadir.inspectFolder(p))
+  handle('settings:switch', (target: string, mode: 'use' | 'move') => datadir.switchDataDir(target, mode))
+  handle('settings:setupDone', () => datadir.markSetupDone())
+  handle('sync:status', () => storeStatus())
+  handle('sync:now', async () => {
+    await flush()
+    await poll()
+    return storeStatus()
+  })
+
+  /* Actualizaciones */
+  handle('update:state', () => updater.getUpdateState())
+  handle('update:check', () => updater.checkForUpdates())
+  handle('update:download', () => updater.downloadUpdate())
+  handle('update:install', () => updater.installUpdate())
+
   /* App */
   handle('app:info', () => ({ version: app.getVersion(), dataDir: getDataDir(), trashRetentionDays: trash.TRASH_RETENTION_DAYS }))
   handle('app:openDataDir', async () => {

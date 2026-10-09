@@ -1,9 +1,13 @@
 import { app, BrowserWindow, Menu, shell } from 'electron'
 import { join } from 'path'
-import { ensureDataDirs } from './paths'
-import { openDb, closeDb } from './db'
+import { existsSync } from 'fs'
+import { defaultDataDir, ensureDataDirs } from './paths'
+import { closeDb } from './db'
 import { registerIpc } from './ipc'
 import { purgeExpired } from './trash'
+import { checkDirty, flush, initStore, poll } from './store'
+import { configExists, writeConfig } from './config'
+import { startAutoCheck } from './updater'
 
 // Una sola ventana de LawChest abierta a la vez
 if (!app.requestSingleInstanceLock()) {
@@ -33,6 +37,11 @@ function createWindow(): void {
       devTools: !app.isPackaged
     }
   })
+
+  // Al volver a LawChest comprobamos si hay cambios hechos en el otro ordenador;
+  // al salir de la ventana guardamos enseguida lo pendiente
+  mainWindow.on('focus', () => poll())
+  mainWindow.on('blur', () => flush())
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize()
@@ -65,16 +74,37 @@ app.on('second-instance', () => {
 app.whenReady().then(async () => {
   app.setAppUserModelId('com.lawchest.app')
   Menu.setApplicationMenu(null)
+  // Usuarios de la versión 1.0: ya tienen sus datos en Documentos\LawChest
+  if (!configExists() && existsSync(join(defaultDataDir(), 'lawchest.db'))) writeConfig({ setupDone: true })
   ensureDataDirs()
-  openDb()
+  await initStore()
   registerIpc()
   // Limpieza automática de la papelera (al abrir y cada 6 horas)
-  await purgeExpired().catch((e) => console.error('Error limpiando la papelera', e))
-  setInterval(() => purgeExpired().catch(() => undefined), 6 * 60 * 60 * 1000)
+  const purge = (): Promise<void> =>
+    purgeExpired()
+      .then(() => checkDirty())
+      .catch((e) => console.error('Error limpiando la papelera', e))
+  await purge()
+  setInterval(purge, 6 * 60 * 60 * 1000)
+  // Cambios desde el otro ordenador
+  setInterval(() => poll(), 15 * 1000)
   createWindow()
+  startAutoCheck()
+})
+
+let quitting = false
+app.on('before-quit', (event) => {
+  if (quitting) return
+  event.preventDefault()
+  quitting = true
+  flush()
+    .catch(() => undefined)
+    .finally(() => {
+      closeDb()
+      app.quit()
+    })
 })
 
 app.on('window-all-closed', () => {
-  closeDb()
   app.quit()
 })
