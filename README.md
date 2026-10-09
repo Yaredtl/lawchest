@@ -37,7 +37,7 @@ Cada vez que se suben cambios a GitHub, la acción **«Instalador de Windows»**
 2. Al final de la página, en **Artifacts**, descarga **LawChest-Instalador-Windows**. Es un `.zip` que contiene `LawChest-Setup-x.y.z.exe`.
 3. Ejecuta el `.exe` en el ordenador. Windows puede mostrar el aviso «Windows protegió su PC», porque el programa no está firmado digitalmente: pulsa **Más información → Ejecutar de todas formas**.
 
-Para publicar una versión con descarga directa en **Releases**, crea una etiqueta `vX.Y.Z` (por ejemplo, `v1.0.0`).
+Cada vez que se actualiza la rama `main`, el instalador también se publica en **Releases** con la versión de `package.json` (por ejemplo, `v1.0.0`). Para sacar una versión nueva, sube el número de `version` en `package.json`.
 
 ## Desarrollo
 
