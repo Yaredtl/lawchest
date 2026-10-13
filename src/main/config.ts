@@ -8,6 +8,8 @@ export interface LocalConfig {
   dataDir?: string
   /** Ya se ha mostrado la bienvenida / elegido dónde guardar los datos */
   setupDone?: boolean
+  /** Sincronización con Google Drive por internet */
+  gdrive?: { enabled: boolean; rootId: string }
 }
 
 /** Estado de la sincronización de la base de datos en este ordenador */

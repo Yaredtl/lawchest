@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { Modal } from './ui'
 import { ChestMark } from './Logo'
 import { DataLocationChooser } from './DataLocation'
+import { ConnectGoogleButton } from './GoogleDrive'
 
 /** Primera vez que se abre LawChest en este ordenador: ¿uno o varios ordenadores? */
 export function Welcome({ info, onDone }: { info: SettingsInfo; onDone: () => void }) {
@@ -48,8 +49,14 @@ export function Welcome({ info, onDone }: { info: SettingsInfo; onDone: () => vo
           <p className="text-[15px] text-stone-600">
             {foundData
               ? 'Hemos encontrado datos de LawChest en tu nube (seguramente de tu otro ordenador). Pulsa en ella para usarlos aquí:'
-              : 'Elige la nube donde guardar los datos. En tu otro ordenador, instala LawChest y elige la misma.'}
+              : 'Conecta tu Google Drive (recomendado) o elige otra nube. En tu otro ordenador, instala LawChest y elige la misma: se descargará todo.'}
           </p>
+          {info.gdrive.configured && (
+            <>
+              <ConnectGoogleButton onDone={() => setTimeout(() => window.location.reload(), 600)} />
+              <p className="pt-1 text-xs font-medium tracking-wide text-stone-400 uppercase">O una carpeta de tu ordenador</p>
+            </>
+          )}
           <DataLocationChooser suggestions={info.suggestions} currentDir={info.dataDir} />
           <button onClick={() => setStep('choose')} className="text-sm text-stone-500 hover:text-brand-700">
             ← Volver

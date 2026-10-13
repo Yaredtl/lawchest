@@ -114,6 +114,7 @@ export interface SettingsInfo {
   version: string
   updatesSupported: boolean
   uninstallSupported: boolean
+  gdrive: GDriveStatus
 }
 
 export type UpdateState =
@@ -124,3 +125,19 @@ export type UpdateState =
   | { status: 'downloading'; version: string; percent: number }
   | { status: 'ready'; version: string }
   | { status: 'error'; message: string }
+
+export interface GDriveStatus {
+  enabled: boolean
+  state: 'idle' | 'syncing' | 'error' | 'reconnect' | 'off'
+  lastSyncAt: string | null
+  lastError: string | null
+  progress: { done: number; total: number } | null
+  lastResult: { up: number; down: number; deleted: number; conflicts: number; failed: number } | null
+  configured: boolean
+  connected: boolean
+  email: string | null
+  connectedAt: string | null
+  daysLeft: number | null
+  needsReconnect: boolean
+  rootId: string | null
+}
