@@ -113,6 +113,7 @@ export interface SettingsInfo {
   sync: SyncStatus
   version: string
   updatesSupported: boolean
+  uninstallSupported: boolean
 }
 
 export type UpdateState =

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Cloud, Download, FolderOpen, HardDrive, Info, Loader2, RefreshCw, Sparkles } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Cloud, Download, FolderOpen, HardDrive, Info, Loader2, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import type { SettingsInfo } from '@shared/types'
 import { api } from '../lib/api'
 import { useNewMenu } from '../App'
-import { Button, Spinner } from '../components/ui'
-import { useToast } from '../components/feedback'
+import { Button, Modal, Spinner } from '../components/ui'
+import { useConfirm, useToast } from '../components/feedback'
 import { DataLocationChooser } from '../components/DataLocation'
 import { useUpdateState } from '../components/UpdateNotice'
 
@@ -17,6 +17,97 @@ export function timeAgo(iso: string | null): string {
   const h = Math.round(m / 60)
   if (h < 24) return `hace ${h} h`
   return new Date(iso).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+function UninstallSection({ info }: { info: SettingsInfo }) {
+  const [open, setOpen] = useState(false)
+  const [deleteData, setDeleteData] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const confirm = useConfirm()
+  const toast = useToast()
+
+  const run = async (): Promise<void> => {
+    const ok = await confirm({
+      title: deleteData ? '¿Desinstalar y borrar todos los datos?' : '¿Desinstalar LawChest?',
+      danger: true,
+      confirmText: deleteData ? 'Sí, desinstalar y borrar' : 'Sí, desinstalar',
+      message: deleteData ? (
+        <>
+          Se borrarán <b>todos tus clientes, archivos y cuentas</b> de <span className="break-all">{info.dataDir}</span>
+          {info.provider && (
+            <>
+              {' '}
+              y, como está en <b>{info.provider}</b>, también desaparecerán de tus otros ordenadores
+            </>
+          )}
+          . <b>No se podrá recuperar.</b> Después se desinstalará el programa.
+        </>
+      ) : (
+        <>Se eliminará el programa de este ordenador. Tus datos se conservan en <span className="break-all">{info.dataDir}</span>.</>
+      )
+    })
+    if (!ok) return
+    setBusy(true)
+    try {
+      await api.app.uninstall(deleteData)
+    } catch (e) {
+      toast.error((e as Error).message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-stone-200 p-5 sm:p-6">
+      <h2 className="font-display mb-1 text-2xl text-brand-800">Desinstalar LawChest</h2>
+      <p className="text-sm text-stone-600">
+        Elimina el programa y sus ajustes de este ordenador. Puedes elegir si conservar o borrar también tus datos.
+      </p>
+      <Button
+        className="mt-4 hover:border-red-300 hover:text-red-700"
+        icon={<Trash2 className="size-4" />}
+        onClick={() => setOpen(true)}
+        disabled={!info.uninstallSupported}
+      >
+        Desinstalar LawChest…
+      </Button>
+      {!info.uninstallSupported && (
+        <p className="mt-2 text-sm text-stone-500">Solo disponible en la versión instalada en Windows. También puedes desinstalarlo desde Configuración de Windows → Aplicaciones.</p>
+      )}
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Desinstalar LawChest"
+        icon={
+          <div className="flex size-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+            <Trash2 className="size-5" />
+          </div>
+        }
+        footer={
+          <>
+            <Button onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="danger" onClick={run} loading={busy}>
+              Desinstalar
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 pb-2 text-[15px] text-stone-600">
+          <p>Se eliminará el programa, sus accesos directos, sus ajustes y la copia de trabajo de este ordenador.</p>
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-stone-200 p-4 has-[:checked]:border-red-400 has-[:checked]:bg-red-50">
+            <input type="checkbox" checked={deleteData} onChange={(e) => setDeleteData(e.target.checked)} className="mt-1 size-4 accent-red-600" />
+            <span>
+              <b className="text-stone-800">Borrar también todos mis datos</b>
+              <span className="block text-sm text-stone-500">
+                Clientes, archivos, cuentas y papelera de <span className="break-all">{info.dataDir}</span>.
+                {info.provider && ` Están en ${info.provider}: también se borrarán en tus otros ordenadores.`}
+              </span>
+            </span>
+          </label>
+          {!deleteData && <p className="text-sm text-stone-500">Tus datos se conservarán y podrás volver a usarlos si reinstalas LawChest.</p>}
+        </div>
+      </Modal>
+    </section>
+  )
 }
 
 export default function SettingsPage() {
@@ -154,6 +245,8 @@ export default function SettingsPage() {
               </span>
             </div>
           </section>
+
+          <UninstallSection info={info} />
         </div>
       </div>
     </div>

@@ -1,15 +1,23 @@
 import { useState } from 'react'
-import { Cloud, FolderSearch, HardDrive, CheckCircle2 } from 'lucide-react'
+import { Cloud, FolderSearch, CheckCircle2 } from 'lucide-react'
 import type { CloudSuggestion, FolderInfo } from '@shared/types'
 import { api } from '../lib/api'
 import { Button } from './ui'
-import { useConfirm, useToast } from './feedback'
+import { useToast } from './feedback'
 
 const PROVIDER_COLOR: Record<string, string> = {
   OneDrive: 'text-sky-600 bg-sky-50',
   'Google Drive': 'text-green-700 bg-green-50',
   Dropbox: 'text-blue-600 bg-blue-50',
   iCloud: 'text-stone-600 bg-stone-100'
+}
+
+const MAIN_PROVIDERS = ['OneDrive', 'Google Drive', 'Dropbox'] as const
+
+const PROVIDER_HINT: Record<string, string> = {
+  OneDrive: 'suele estar en C:\\Usuarios\\(tu usuario)\\OneDrive.',
+  'Google Drive': 'instala «Google Drive para ordenador», inicia sesión y elige «Mi unidad» (normalmente en la unidad G:).',
+  Dropbox: 'suele estar en C:\\Usuarios\\(tu usuario)\\Dropbox.'
 }
 
 /** Elegir una carpeta sincronizada (OneDrive, Google Drive…) para usar LawChest en varios ordenadores */
@@ -23,7 +31,6 @@ export function DataLocationChooser({
   onSwitched?: () => void
 }) {
   const [busy, setBusy] = useState<string | null>(null)
-  const confirm = useConfirm()
   const toast = useToast()
 
   const choose = async (f: FolderInfo): Promise<void> => {
@@ -31,38 +38,6 @@ export function DataLocationChooser({
       toast.info('Ya estás usando esa carpeta.')
       return
     }
-    const ok = await confirm(
-      f.hasData
-        ? {
-            title: '¿Usar los datos de esta carpeta?',
-            confirmText: 'Sí, usar estos datos',
-            message: (
-              <>
-                En <b className="break-all">{f.target}</b> hay datos de LawChest (seguramente de tu otro ordenador). A partir de ahora este
-                ordenador usará esos datos.
-                <br />
-                <br />
-                <span className="text-sm text-stone-500">
-                  Lo que hubiera en la carpeta actual no se borra; se queda en <span className="break-all">{currentDir}</span>.
-                </span>
-              </>
-            )
-          }
-        : {
-            title: '¿Guardar los datos en esta carpeta?',
-            confirmText: 'Sí, guardar aquí',
-            message: (
-              <>
-                Se copiarán todos tus datos (clientes, archivos, cuentas y papelera) a <b className="break-all">{f.target}</b> y LawChest
-                guardará ahí todo a partir de ahora.
-                <br />
-                <br />
-                <span className="text-sm text-stone-500">La carpeta actual no se borra; puedes eliminarla cuando compruebes que todo está bien.</span>
-              </>
-            )
-          }
-    )
-    if (!ok) return
     setBusy(f.target)
     try {
       await api.settings.switchTo(f.target, f.hasData ? 'use' : 'move')
@@ -116,15 +91,22 @@ export function DataLocationChooser({
           {busy === s.target && <span className="text-sm text-stone-500">Copiando…</span>}
         </button>
       ))}
-      {suggestions.length === 0 && (
-        <div className="flex items-start gap-3 rounded-2xl bg-stone-50 p-4 text-sm text-stone-600">
-          <HardDrive className="mt-0.5 size-5 shrink-0 text-stone-400" />
-          <span>
-            No hemos encontrado OneDrive, Google Drive ni Dropbox en este ordenador. Puedes iniciar sesión en OneDrive (viene con Windows) o
-            elegir otra carpeta compartida, como un disco de red.
-          </span>
-        </div>
-      )}
+      {MAIN_PROVIDERS.filter((p) => !suggestions.some((s) => s.name === p)).map((p) => (
+        <button
+          key={p}
+          onClick={pick}
+          disabled={!!busy}
+          className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-stone-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/50 disabled:opacity-60"
+        >
+          <div className={`flex size-11 shrink-0 items-center justify-center rounded-xl opacity-70 ${PROVIDER_COLOR[p] ?? ''}`}>
+            <Cloud className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-stone-700">{p}</div>
+            <div className="text-xs text-stone-500">No lo hemos encontrado automáticamente. Pulsa para elegir su carpeta: {PROVIDER_HINT[p]}</div>
+          </div>
+        </button>
+      ))}
       <Button icon={<FolderSearch className="size-4" />} onClick={pick} disabled={!!busy}>
         Elegir otra carpeta…
       </Button>

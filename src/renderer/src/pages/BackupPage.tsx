@@ -17,12 +17,6 @@ export default function BackupPage() {
   }, [])
 
   const create = async (): Promise<void> => {
-    const ok = await confirm({
-      title: '¿Crear una copia de seguridad?',
-      message: 'Se guardará en un único archivo .zip todo LawChest: clientes, archivos, cuentas y papelera. Después podrás elegir dónde guardarlo (por ejemplo, en un USB).',
-      confirmText: 'Sí, crear copia'
-    })
-    if (!ok) return
     setBusy('create')
     try {
       const path = await api.backup.create()
