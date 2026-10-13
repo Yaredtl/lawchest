@@ -26,6 +26,19 @@ jobs:
       - name: Comprobar tipos
         run: npm run typecheck
 
+      - name: Comprobar credenciales de Google (sin mostrarlas)
+        shell: bash
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -n "$GOOGLE_CLIENT_ID" ] && [ -n "$GOOGLE_CLIENT_SECRET" ]; then
+            echo "Credenciales de Google configuradas (id de ${#GOOGLE_CLIENT_ID} caracteres)"
+            case "$GOOGLE_CLIENT_ID" in *.apps.googleusercontent.com) echo "Formato del ID correcto";; *) echo "::warning::GOOGLE_CLIENT_ID no termina en .apps.googleusercontent.com";; esac
+          else
+            echo "::warning::Faltan los secrets GOOGLE_CLIENT_ID y/o GOOGLE_CLIENT_SECRET: la conexión con Google Drive no estará disponible"
+          fi
+
       - name: Crear instalador LawChest-Setup.exe
         run: npm run dist:win
         env:
