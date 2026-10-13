@@ -42,7 +42,8 @@ export const api = {
   },
   app: {
     info: () => invoke<AppInfo>('app:info'),
-    openDataDir: () => invoke<void>('app:openDataDir')
+    openDataDir: () => invoke<void>('app:openDataDir'),
+    uninstall: (deleteData: boolean) => invoke<void>('app:uninstall', deleteData)
   },
   clients: {
     list: () => invoke<ClientSummary[]>('clients:list'),

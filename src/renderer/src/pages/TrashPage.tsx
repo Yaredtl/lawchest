@@ -25,17 +25,6 @@ export default function TrashPage() {
   useNewMenu([], [])
 
   const restore = async (it: TrashItem): Promise<void> => {
-    const ok = await confirm({
-      title: '¿Restaurar?',
-      message: (
-        <>
-          <b>{it.name}</b> volverá a su sitio
-          {it.kind !== 'cliente' && it.clientName ? <> en {it.clientName}</> : ''}.
-        </>
-      ),
-      confirmText: 'Sí, restaurar'
-    })
-    if (!ok) return
     try {
       toast.success(await api.trash.restore(it.id))
       load()

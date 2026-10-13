@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Download, FileSpreadsheet, FileText, Sheet } from 'lucide-react'
 import type { ExportFormat } from '@shared/types'
 import { Button, Modal } from './ui'
-import { useConfirm, useToast } from './feedback'
+import { useToast } from './feedback'
 import { api } from '../lib/api'
 
 const FORMATS: { id: ExportFormat; label: string; text: string; icon: ReactNode }[] = [
@@ -27,15 +27,8 @@ export function ExportDialog({
   const [format, setFormat] = useState<ExportFormat>('pdf')
   const [busy, setBusy] = useState(false)
   const toast = useToast()
-  const confirm = useConfirm()
 
   const go = async (): Promise<void> => {
-    const ok = await confirm({
-      title: '¿Generar el resumen?',
-      message: `Se creará un archivo ${FORMATS.find((f) => f.id === format)!.label} y podrás elegir dónde guardarlo.`,
-      confirmText: 'Sí, generar'
-    })
-    if (!ok) return
     setBusy(true)
     try {
       const path = await run(format)

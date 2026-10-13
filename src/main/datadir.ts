@@ -56,8 +56,9 @@ export function cloudSuggestions(): CloudSuggestion[] {
     if (p && existsSync(p)) found.push({ name: 'OneDrive', base: p })
   }
   const home = homedir()
+  // Google Drive para ordenador: unidad virtual (G:\Mi unidad) o modo réplica (C:\Users\X\Mi unidad)
   if (process.platform === 'win32') {
-    for (const letter of 'GHIJKLMNOPQRSTUVWXYZ') {
+    for (const letter of 'DEFGHIJKLMNOPQRSTUVWXYZ') {
       for (const sub of ['Mi unidad', 'My Drive']) {
         const p = `${letter}:\\${sub}`
         try {
@@ -68,8 +69,12 @@ export function cloudSuggestions(): CloudSuggestion[] {
       }
     }
   }
-  for (const sub of ['Google Drive', 'Google Drive\\Mi unidad', 'Google Drive\\My Drive']) {
+  for (const sub of ['Mi unidad', 'My Drive', join('Google Drive', 'Mi unidad'), join('Google Drive', 'My Drive')]) {
     const p = join(home, sub)
+    if (existsSync(p)) found.push({ name: 'Google Drive', base: p })
+  }
+  {
+    const p = join(home, 'Google Drive')
     if (existsSync(p) && !existsSync(join(p, 'Mi unidad')) && !existsSync(join(p, 'My Drive'))) found.push({ name: 'Google Drive', base: p })
   }
   try {

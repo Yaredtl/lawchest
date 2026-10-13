@@ -15,7 +15,7 @@ Programa de escritorio para Windows que organiza los **clientes**, sus **archivo
 | **Gastos e ingresos** | Tabla con concepto, importe, tipo y fecha opcional. El **balance** (ingresos − gastos) está siempre visible. |
 | **Resúmenes** | Por cliente, o mensual con todos los clientes (totales y detalle de movimientos). Se descargan en **PDF, Excel o CSV**. |
 | **Papelera** | Lo borrado (clientes, carpetas y archivos) se guarda **30 días** y después se elimina solo. Se puede restaurar o vaciar cuando se quiera. |
-| **Confirmaciones** | Toda acción de crear, editar o borrar pide confirmación. |
+| **Confirmaciones** | Solo se pide confirmación antes de borrar datos (o sustituirlos al restaurar una copia). |
 | **Copias de seguridad** | Un botón guarda todo en un `.zip`, por ejemplo en un USB, y otro lo restaura. |
 | **Varios ordenadores** | Los datos pueden guardarse en OneDrive, Google Drive o Dropbox y se ven igual en todos los ordenadores. |
 | **Actualizaciones** | Al abrir LawChest se avisa si hay una versión nueva, que se instala con un clic. |
@@ -34,7 +34,7 @@ LawChest\
 
 ### Usar LawChest en varios ordenadores
 
-1. En el primer ordenador, ve a **Ajustes → Dónde se guardan tus datos** y elige **OneDrive**, **Google Drive** o **Dropbox**. Los datos se copian a `<tu nube>\LawChest`.
+1. En el primer ordenador, ve a **Ajustes → Dónde se guardan tus datos** y elige **OneDrive**, **Google Drive** o **Dropbox**. Los datos se copian a `<tu nube>\LawChest`. Si no se detecta tu nube, su botón te deja elegir la carpeta a mano. En Google Drive es «Mi unidad», que normalmente está en la unidad G:.
 2. En el segundo ordenador, inicia sesión en la misma nube, instala LawChest y, en la pantalla de bienvenida, elige esa nube. Aparecerá marcada como **«Datos encontrados»**.
 
 Cómo funciona:
@@ -43,6 +43,13 @@ Cómo funciona:
 - Tras cada cambio, LawChest guarda en `lawchest.db` una versión completa y la sustituye de golpe.
 - Al abrir la app, al volver a la ventana y cada 15 segundos, LawChest comprueba si el otro ordenador ha guardado algo nuevo y, si es así, lo carga.
 - Si se hacen cambios a la vez en los dos ordenadores, se queda la versión más reciente y la otra se guarda en `Conflictos de sincronización`.
+
+## Desinstalar
+
+- **Desde LawChest:** en **Ajustes → Desinstalar LawChest**. Se puede marcar «Borrar también todos mis datos». Si están en OneDrive, Google Drive o Dropbox, se avisa de que también desaparecerán de los otros ordenadores.
+- **Desde Windows:** en **Configuración → Aplicaciones → LawChest → Desinstalar**. Al final se pregunta si borrar también los datos de `Documentos\LawChest` (por defecto, no). Los datos de la nube no se tocan desde aquí.
+
+En ambos casos se elimina el programa, sus accesos directos, los ajustes y la copia de trabajo (`%APPDATA%\LawChest`) y la caché de actualizaciones. Las actualizaciones automáticas nunca borran nada.
 
 ## Actualizaciones automáticas
 

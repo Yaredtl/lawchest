@@ -102,24 +102,6 @@ export default function FilesPanel({ clientId, clientName }: { clientId: number;
     const total = incoming.paths.length + incoming.buffers.length
     if (total === 0) return
     const names = [...incoming.paths.map(baseName), ...incoming.buffers.map((b) => b.name)]
-    const ok = await confirm({
-      title: total === 1 ? '¿Añadir este archivo?' : `¿Añadir ${total} elementos?`,
-      message: (
-        <>
-          Se copiará{total === 1 ? '' : 'n'} a {folderLabel(target)}:
-          <ul className="mt-2 max-h-40 list-inside list-disc overflow-y-auto text-sm text-stone-500">
-            {names.slice(0, 12).map((n, i) => (
-              <li key={i} className="truncate">
-                {n}
-              </li>
-            ))}
-            {names.length > 12 && <li>y {names.length - 12} más…</li>}
-          </ul>
-        </>
-      ),
-      confirmText: 'Sí, añadir'
-    })
-    if (!ok) return
     setBusy(true)
     try {
       let n = 0
@@ -225,16 +207,6 @@ export default function FilesPanel({ clientId, clientName }: { clientId: number;
   }
 
   const moveTo = async (e: FileEntry, target: string): Promise<void> => {
-    const ok = await confirm({
-      title: '¿Mover aquí?',
-      message: (
-        <>
-          <b>{e.name}</b> se moverá a {folderLabel(target)}.
-        </>
-      ),
-      confirmText: 'Sí, mover'
-    })
-    if (!ok) return
     try {
       await api.files.move(clientId, e.path, target)
       toast.success(`«${e.name}» movido.`)
@@ -533,8 +505,6 @@ export default function FilesPanel({ clientId, clientName }: { clientId: number;
         }
         onCancel={() => setPrompt(null)}
         onSubmit={async (name) => {
-          const ok = await confirm({ title: '¿Crear la carpeta?', message: <>Se creará la carpeta <b>{name}</b>.</>, confirmText: 'Sí, crear' })
-          if (!ok) return
           await api.files.createFolder(clientId, path, name)
           toast.success(`Carpeta «${name}» creada.`)
           setPrompt(null)
@@ -560,16 +530,6 @@ export default function FilesPanel({ clientId, clientName }: { clientId: number;
             setPrompt(null)
             return
           }
-          const ok = await confirm({
-            title: '¿Cambiar el nombre?',
-            message: (
-              <>
-                <b>{prompt.entry.name}</b> pasará a llamarse <b>{name}</b>.
-              </>
-            ),
-            confirmText: 'Sí, cambiar'
-          })
-          if (!ok) return
           await api.files.rename(clientId, prompt.entry.path, name)
           toast.success('Nombre cambiado.')
           setPrompt(null)

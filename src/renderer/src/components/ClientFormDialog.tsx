@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Plus, Trash2, UserPlus, UserPen } from 'lucide-react'
 import type { Client, ClientField } from '@shared/types'
 import { Button, Field, IconButton, Input, Modal } from './ui'
-import { useConfirm, useToast } from './feedback'
+import { useToast } from './feedback'
 import { api } from '../lib/api'
 
 const SUGGESTED = ['DNI / NIE', 'Teléfono', 'Email', 'Dirección', 'Nº de expediente', 'Juzgado', 'Empresa', 'Notas']
@@ -22,7 +22,6 @@ export function ClientFormDialog({
   const [fields, setFields] = useState<ClientField[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const confirm = useConfirm()
   const toast = useToast()
   const editing = !!client
 
@@ -44,16 +43,6 @@ export function ClientFormDialog({
       setError('Escribe el nombre del cliente.')
       return
     }
-    const ok = await confirm({
-      title: editing ? '¿Guardar los cambios?' : '¿Crear este cliente?',
-      message: editing ? (
-        <>Se actualizarán los datos de <b>{clean}</b>.</>
-      ) : (
-        <>Se creará el cliente <b>{clean}</b> con su propia zona de trabajo para archivos y cuentas.</>
-      ),
-      confirmText: editing ? 'Sí, guardar' : 'Sí, crear cliente'
-    })
-    if (!ok) return
     setSaving(true)
     try {
       const input = { name: clean, fields: fields.filter((f) => f.label.trim() && f.value.trim()) }

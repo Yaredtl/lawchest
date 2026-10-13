@@ -7,6 +7,7 @@ import * as exporter from './exporter'
 import * as backup from './backup'
 import * as datadir from './datadir'
 import * as updater from './updater'
+import * as uninstaller from './uninstall'
 import { checkDirty, flush, poll, storeStatus, syncEvents } from './store'
 import { UserError } from './fsutil'
 import { getDataDir } from './paths'
@@ -90,6 +91,7 @@ export function registerIpc(): void {
       sync: storeStatus(),
       version: app.getVersion(),
       updatesSupported: updater.updatesSupported(),
+      uninstallSupported: uninstaller.uninstallSupported(),
       configExists: configExists()
     }
   })
@@ -113,6 +115,8 @@ export function registerIpc(): void {
     await poll()
     return storeStatus()
   })
+
+  handle('app:uninstall', (deleteData: boolean) => uninstaller.uninstall(!!deleteData))
 
   /* Actualizaciones */
   handle('update:state', () => updater.getUpdateState())

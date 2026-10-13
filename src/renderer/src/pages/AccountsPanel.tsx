@@ -174,17 +174,6 @@ export default function AccountsPanel({ clientId, onChanged }: { clientId: numbe
 
   const save = async (input: { concept: string; type: MovementType; amount: number; date: string | null }): Promise<void> => {
     const editing = dialog.movement
-    const ok = await confirm({
-      title: editing ? '¿Guardar los cambios?' : '¿Añadir este movimiento?',
-      message: (
-        <>
-          {input.type === 'ingreso' ? 'Ingreso' : 'Gasto'} de <b>{eur(input.amount)}</b> por «{input.concept}»
-          {input.date ? ` con fecha ${fmtDate(input.date)}` : ' sin fecha'}.
-        </>
-      ),
-      confirmText: editing ? 'Sí, guardar' : 'Sí, añadir'
-    })
-    if (!ok) return
     if (editing) await api.movements.update(editing.id, input)
     else await api.movements.create(clientId, input)
     toast.success(editing ? 'Movimiento actualizado.' : 'Movimiento añadido.')
