@@ -6,6 +6,7 @@ import { useNewMenu } from '../App'
 import { Button, Modal, Spinner } from '../components/ui'
 import { useConfirm, useToast } from '../components/feedback'
 import { DataLocationChooser } from '../components/DataLocation'
+import { GoogleDriveCard } from '../components/GoogleDrive'
 import { useUpdateState } from '../components/UpdateNotice'
 
 export function timeAgo(iso: string | null): string {
@@ -193,15 +194,15 @@ export default function SettingsPage() {
             </div>
 
             <h3 className="mt-6 mb-1 text-[15px] font-semibold text-stone-800">Usar LawChest en varios ordenadores</h3>
-            <ol className="mb-4 list-inside list-decimal space-y-1 text-sm text-stone-600">
-              <li>
-                En este ordenador, elige tu <b>OneDrive</b>, <b>Google Drive</b> o <b>Dropbox</b>. Tus datos se copiarán allí.
-              </li>
-              <li>En el otro ordenador, instala LawChest e inicia sesión en la misma nube.</li>
-              <li>
-                Al abrir LawChest allí, elige la misma nube: aparecerá como <b>«Datos encontrados»</b>.
-              </li>
-            </ol>
+            <p className="mb-3 text-sm text-stone-600">
+              <b>Opción recomendada:</b> conecta tu Google Drive por internet. En el otro ordenador, instala LawChest y conecta la misma cuenta:
+              se descargará todo solo.
+            </p>
+            <GoogleDriveCard initial={info.gdrive} />
+            <p className="mt-5 mb-2 text-sm text-stone-600">
+              <b>Alternativa:</b> guardar los datos en la carpeta de <b>OneDrive</b>, <b>Dropbox</b> o <b>Google Drive para ordenador</b> instalados en este
+              equipo (en el otro ordenador, elige la misma; aparecerá como «Datos encontrados»).
+            </p>
             <DataLocationChooser suggestions={info.suggestions} currentDir={info.dataDir} />
             <p className="mt-4 flex items-start gap-2 text-xs text-stone-500">
               <Info className="mt-0.5 size-3.5 shrink-0" />

@@ -8,6 +8,8 @@ import * as backup from './backup'
 import * as datadir from './datadir'
 import * as updater from './updater'
 import * as uninstaller from './uninstall'
+import * as gsync from './gsync'
+import { authEvents } from './gauth'
 import { checkDirty, flush, poll, storeStatus, syncEvents } from './store'
 import { UserError } from './fsutil'
 import { getDataDir } from './paths'
@@ -25,6 +27,14 @@ function errorMessage(e: unknown): string {
   return 'Ha ocurrido un error inesperado: ' + (err?.message ?? String(e))
 }
 
+/** Canales que cambian archivos o datos: tras ellos se sincroniza con Google Drive */
+const MUTATING = new Set([
+  'clients:create', 'clients:update', 'clients:delete',
+  'movements:create', 'movements:update', 'movements:delete',
+  'files:createFolder', 'files:addPaths', 'files:addBuffer', 'files:rename', 'files:move', 'files:delete',
+  'trash:restore', 'trash:delete', 'trash:empty', 'backup:restore'
+])
+
 /** Registra un canal IPC que siempre devuelve { ok, data } o { ok: false, error } */
 function handle<A extends unknown[], T>(channel: string, fn: (...args: A) => T | Promise<T>): void {
   ipcMain.handle(channel, async (_event, ...args: unknown[]): Promise<Result<T>> => {
@@ -39,6 +49,7 @@ function handle<A extends unknown[], T>(channel: string, fn: (...args: A) => T |
       } catch {
         /* base de datos cerrándose */
       }
+      if (MUTATING.has(channel)) gsync.scheduleSync()
     }
   })
 }
@@ -79,6 +90,28 @@ export function registerIpc(): void {
   syncEvents.on('conflict', (info) => broadcast('sync:conflict', info))
   syncEvents.on('error', (msg) => broadcast('sync:error', msg))
   syncEvents.on('saved', () => broadcast('sync:saved'))
+  gsync.gsyncEvents.on('status', () => broadcast('gdrive:status', gsync.gsyncStatus()))
+  gsync.gsyncEvents.on('filesChanged', () => broadcast('sync:reloaded'))
+  authEvents.on('changed', () => broadcast('gdrive:status', gsync.gsyncStatus()))
+
+  /* Google Drive (por internet) */
+  handle('gdrive:status', () => gsync.gsyncStatus())
+  handle('gdrive:connect', async () => {
+    await gsync.enableGoogleDrive()
+    return gsync.gsyncStatus()
+  })
+  handle('gdrive:reconnect', async () => {
+    await gsync.reconnectGoogleDrive()
+    return gsync.gsyncStatus()
+  })
+  handle('gdrive:disconnect', async () => {
+    await gsync.disableGoogleDrive()
+    return gsync.gsyncStatus()
+  })
+  handle('gdrive:syncNow', async () => {
+    await gsync.syncNow()
+    return gsync.gsyncStatus()
+  })
 
   /* Carpeta de datos y sincronización entre ordenadores */
   handle('settings:get', () => {
@@ -92,6 +125,7 @@ export function registerIpc(): void {
       version: app.getVersion(),
       updatesSupported: updater.updatesSupported(),
       uninstallSupported: uninstaller.uninstallSupported(),
+      gdrive: gsync.gsyncStatus(),
       configExists: configExists()
     }
   })

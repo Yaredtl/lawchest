@@ -12,7 +12,8 @@ import type {
   FolderInfo,
   SyncStatus,
   TrashItem,
-  UpdateState
+  UpdateState,
+  GDriveStatus
 } from '@shared/types'
 
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
@@ -29,6 +30,13 @@ export const api = {
     switchTo: (target: string, mode: 'use' | 'move') =>
       invoke<{ previous: string; removedPrevious: boolean }>('settings:switch', target, mode),
     setupDone: () => invoke<void>('settings:setupDone')
+  },
+  gdrive: {
+    status: () => invoke<GDriveStatus>('gdrive:status'),
+    connect: () => invoke<GDriveStatus>('gdrive:connect'),
+    reconnect: () => invoke<GDriveStatus>('gdrive:reconnect'),
+    disconnect: () => invoke<GDriveStatus>('gdrive:disconnect'),
+    syncNow: () => invoke<GDriveStatus>('gdrive:syncNow')
   },
   sync: {
     status: () => invoke<SyncStatus>('sync:status'),

@@ -8,6 +8,7 @@ import { purgeExpired } from './trash'
 import { checkDirty, flush, initStore, poll } from './store'
 import { configExists, writeConfig } from './config'
 import { startAutoCheck } from './updater'
+import { finalSync, scheduleSync, startGSync } from './gsync'
 
 // Una sola ventana de LawChest abierta a la vez
 if (!app.requestSingleInstanceLock()) {
@@ -40,7 +41,15 @@ function createWindow(): void {
 
   // Al volver a LawChest comprobamos si hay cambios hechos en el otro ordenador;
   // al salir de la ventana guardamos enseguida lo pendiente
-  mainWindow.on('focus', () => poll())
+  let lastFocusSync = 0
+  mainWindow.on('focus', () => {
+    poll()
+    // También se buscan cambios en Google Drive (como mucho una vez por minuto)
+    if (Date.now() - lastFocusSync > 60 * 1000) {
+      lastFocusSync = Date.now()
+      scheduleSync(1500)
+    }
+  })
   mainWindow.on('blur', () => flush())
 
   mainWindow.once('ready-to-show', () => {
@@ -90,6 +99,7 @@ app.whenReady().then(async () => {
   setInterval(() => poll(), 15 * 1000)
   createWindow()
   startAutoCheck()
+  startGSync()
 })
 
 let quitting = false
@@ -98,6 +108,8 @@ app.on('before-quit', (event) => {
   event.preventDefault()
   quitting = true
   flush()
+    .catch(() => undefined)
+    .then(() => finalSync())
     .catch(() => undefined)
     .finally(() => {
       closeDb()

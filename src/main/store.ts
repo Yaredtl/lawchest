@@ -27,7 +27,7 @@ let queue: Promise<void> = Promise.resolve()
 let lastError: string | null = null
 
 const PUBLISH_DELAY_MS = 1500
-const machineName = (): string => hostname() || 'Este ordenador'
+export const machineName = (): string => hostname() || 'Este ordenador'
 
 function totalChanges(): number {
   const row = getDb().prepare('SELECT total_changes() AS n').get() as { n: number }
@@ -301,6 +301,26 @@ export async function initStore(): Promise<void> {
     }
   }
   lastChanges = totalChanges()
+}
+
+/**
+ * Coloca como base de datos compartida una versión descargada de Google Drive y la carga.
+ * Si aquí había cambios que la otra versión no tiene, se guardan en «Conflictos de sincronización».
+ */
+export function installRemoteSnapshot(tmp: string, conflict: boolean): Promise<void> {
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  }
+  return enqueueStrict(async () => {
+    await renameWithRetry(tmp, dbPath())
+    if (conflict || state.dirty) {
+      await handleConflict()
+    } else {
+      await loadFromShared()
+      syncEvents.emit('reloaded')
+    }
+  })
 }
 
 /** Sustituye todos los datos por una base de datos importada (restaurar copia de seguridad) */

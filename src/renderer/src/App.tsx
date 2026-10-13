@@ -12,6 +12,7 @@ import BackupPage from './pages/BackupPage'
 import SettingsPage from './pages/SettingsPage'
 import { UpdateNotice, useUpdateState } from './components/UpdateNotice'
 import { Welcome } from './components/Welcome'
+import { GoogleDriveLogo, ReconnectNotice, useGDriveStatus } from './components/GoogleDrive'
 import { useToast } from './components/feedback'
 import { api } from './lib/api'
 
@@ -60,6 +61,7 @@ export default function App() {
   // Al llegar cambios del otro ordenador se vuelve a cargar la pantalla actual
   const [dataVersion, setDataVersion] = useState(0)
   const update = useUpdateState()
+  const gdrive = useGDriveStatus()
   const toast = useToast()
 
   const loadSettings = useCallback(() => {
@@ -138,7 +140,21 @@ export default function App() {
         <button className="flex items-center gap-2 hover:text-brand-700" onClick={() => api.app.openDataDir()}>
           <FolderOpen className="size-4" /> Abrir carpeta de datos
         </button>
-        {settings && (
+        {gdrive?.enabled && (
+          <button onClick={() => go({ page: 'settings' })} className="mt-2 flex items-center gap-2 text-left hover:text-brand-700">
+            {gdrive.state === 'syncing' ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <GoogleDriveLogo className="size-4 shrink-0" />}
+            {gdrive.state === 'reconnect' || gdrive.needsReconnect ? (
+              <span className="font-semibold text-red-600">Vuelve a conectar Google Drive</span>
+            ) : gdrive.state === 'syncing' ? (
+              'Sincronizando con Google Drive…'
+            ) : gdrive.state === 'error' ? (
+              <span className="text-red-600">Google Drive: revisar</span>
+            ) : (
+              'Sincronizado con Google Drive'
+            )}
+          </button>
+        )}
+        {settings && !(gdrive?.enabled && !settings.provider) && (
           <button onClick={() => go({ page: 'settings' })} className="mt-2 flex items-center gap-2 text-left hover:text-brand-700" title={settings.dataDir}>
             {saving ? (
               <Loader2 className="size-4 shrink-0 animate-spin" />
@@ -215,6 +231,7 @@ export default function App() {
       {newMenu && <PopupMenu x={newMenu.x} y={newMenu.y} items={newItems} onClose={() => setNewMenu(null)} />}
       {settings?.firstRun && <Welcome info={settings} onDone={loadSettings} />}
       <UpdateNotice />
+      <ReconnectNotice />
     </NavContext.Provider>
   )
 }

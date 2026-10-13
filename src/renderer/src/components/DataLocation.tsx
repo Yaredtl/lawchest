@@ -14,6 +14,9 @@ const PROVIDER_COLOR: Record<string, string> = {
 
 const MAIN_PROVIDERS = ['OneDrive', 'Google Drive', 'Dropbox'] as const
 
+/** «Google Drive para ordenador» para no confundirlo con la conexión por internet */
+const label = (p: string): string => (p === 'Google Drive' ? 'Google Drive para ordenador' : p)
+
 const PROVIDER_HINT: Record<string, string> = {
   OneDrive: 'suele estar en C:\\Usuarios\\(tu usuario)\\OneDrive.',
   'Google Drive': 'instala «Google Drive para ordenador», inicia sesión y elige «Mi unidad» (normalmente en la unidad G:).',
@@ -76,7 +79,7 @@ export function DataLocationChooser({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 font-semibold text-stone-800">
-              {s.name}
+              {label(s.name)}
               {s.isCurrent && <span className="rounded-full bg-brand-700 px-2 py-0.5 text-[11px] font-semibold text-white">En uso</span>}
               {!s.isCurrent && s.hasData && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700">
@@ -102,7 +105,7 @@ export function DataLocationChooser({
             <Cloud className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-stone-700">{p}</div>
+            <div className="font-semibold text-stone-700">{label(p)}</div>
             <div className="text-xs text-stone-500">No lo hemos encontrado automáticamente. Pulsa para elegir su carpeta: {PROVIDER_HINT[p]}</div>
           </div>
         </button>
